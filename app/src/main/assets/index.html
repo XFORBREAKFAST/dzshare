@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DzShare</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#0b0f17;color:#e6ebf5;font-family:system-ui,-apple-system,Roboto,sans-serif}
+.wrap{padding:16px 16px 140px}
+.hdr{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+h1{font-size:22px;margin:0}
+.sub{color:#8a96ad;font-size:13px}
+.card{background:#131a26;border:1px solid #1f2a3c;border-radius:16px;padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1c2536}
+.row:last-child{border-bottom:none}
+.grow{flex:1;min-width:0}
+.name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:15px}
+.meta{font-size:12px;color:#8a96ad}
+.btn{background:#2f6bff;color:#fff;border:none;border-radius:12px;padding:11px 15px;font-weight:600;font-size:14px;white-space:nowrap;font-family:inherit}
+.btn:active{transform:scale(.97);opacity:.9}
+.btn.ghost{background:#1c2536;color:#cfd8ea}
+.btn.red{background:#3a1d24;color:#ff8a9a}
+.btn.sm{padding:8px 12px;font-size:13px}
+.btn.big{width:100%;padding:16px;font-size:16px;border-radius:14px}
+.ic{width:42px;height:42px;border-radius:12px;background:#1c2536;display:grid;place-items:center;flex:none;font-size:20px}
+.empty{color:#64708a;text-align:center;padding:20px;font-size:14px}
+h3{margin:0 0 10px;font-size:14px;color:#aab6cc;font-weight:600}
+.crumb{font-size:13px;color:#7fa6ff;margin-bottom:10px;word-break:break-all}
+.crumb span{padding:2px 0}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.save{display:flex;align-items:center;gap:12px}
+.save b{color:#e6ebf5;font-size:14px;word-break:break-all}
+input{width:100%;background:#0b0f17;border:1px solid #1f2a3c;color:#e6ebf5;border-radius:12px;padding:13px;font-size:15px;margin:8px 0;font-family:inherit}
+.hero{text-align:center;padding:26px 18px}
+.hero .bolt{width:76px;height:76px;border-radius:24px;margin:0 auto 14px;background:linear-gradient(135deg,#2f6bff,#14318f);display:grid;place-items:center;font-size:38px}
+.hero p{color:#8a96ad;font-size:14px;line-height:1.5;margin:6px 0 18px}
+.or{color:#64708a;font-size:12px;margin:16px 0 4px}
+.sheet{position:fixed;left:10px;right:10px;bottom:10px;background:#18213a;border:1px solid #2a3a5c;border-radius:18px;padding:14px;box-shadow:0 10px 40px #000a}
+.bar{height:8px;background:#0b0f17;border-radius:9px;overflow:hidden;margin:10px 0 8px}
+.bar i{display:block;height:100%;background:#2f6bff;width:0;transition:width .4s}
+.bar.ok i{background:#2ecc71}.bar.fail i{background:#e74c3c}
+.big{font-size:20px;font-weight:700}
+.flex{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.hidden{display:none!important}
+.hint{font-size:12px;color:#f0c36d;margin-top:8px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div><h1>⚡ DzShare</h1><div class="sub" id="stat">Belum terhubung</div></div>
+    <button class="btn ghost sm hidden" id="pcbtn" onclick="showConn()">Ganti PC</button>
+  </div>
+
+  <!-- layar sambung -->
+  <div id="conn">
+    <div class="card hero">
+      <div class="bolt">⚡</div>
+      <div class="big">Hubungkan ke PC</div>
+      <p>Jalankan DzShare di PC, lalu scan QR yang muncul di layar.<br>HP dan PC harus di Wi-Fi / hotspot yang sama.</p>
+      <button class="btn big" onclick="Dz.scan()">📷 Scan QR</button>
+      <button class="btn big ghost hidden" id="lastbtn" style="margin-top:10px" onclick="connect(Dz.getPref('last'))"></button>
+      <div class="or">atau ketik alamat dari layar PC</div>
+      <input id="addr" placeholder="192.168.1.5:8765/?k=xxxx" autocapitalize="off" autocorrect="off">
+      <button class="btn ghost big" onclick="connect(addr.value)">Hubungkan</button>
+    </div>
+  </div>
+
+  <!-- layar utama -->
+  <div id="main" class="hidden">
+    <div class="card save">
+      <div class="ic">📂</div>
+      <div class="grow"><div class="meta">Simpan ke</div><b id="fname">Belum dipilih</b></div>
+      <button class="btn ghost sm" onclick="Dz.pickFolder()">Ganti</button>
+    </div>
+    <div class="card">
+      <div class="crumb" id="crumb"></div>
+      <div class="acts" id="acts"></div>
+      <div id="items"><div class="empty">Memuat…</div></div>
+    </div>
+    <div class="card">
+      <div class="flex"><div><h3 style="margin:0">Kirim ke PC</h3><div class="meta">File masuk ke Downloads/DzShare di PC</div></div>
+      <button class="btn ghost" onclick="Dz.pickUpload(full('/up'))">Pilih file</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- panel transfer -->
+<div class="sheet hidden" id="sheet">
+  <div class="flex">
+    <div class="grow">
+      <div class="big" id="tPct">0%</div>
+      <div class="meta" id="tInfo"></div>
+    </div>
+    <button class="btn red sm" id="tBtn" onclick="sheetBtn()">Batal</button>
+  </div>
+  <div class="bar" id="tBar"><i></i></div>
+  <div class="meta name" id="tCur" style="font-weight:400"></div>
+  <div class="hint hidden" id="tErr"></div>
+</div>
+
+<script>
+let base='', tok='', cur=null, NAV=[], ACT=[], reqs={}, rid=0, pending=null, poller=null;
+
+function fmt(b){if(b<1024)return b+' B';const u=['KB','MB','GB','TB'];let i=-1;do{b/=1024;i++}while(b>=1024&&i<3);return b.toFixed(b<10?2:1)+' '+u[i]}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function icon(n,d){if(d)return '📁';const e=n.split('.').pop().toLowerCase();
+ if(['mp4','mov','mkv','avi','webm','m4v','mxf'].includes(e))return '🎬';
+ if(['jpg','jpeg','png','gif','webp','heic','psd','tif','tiff'].includes(e))return '🖼️';
+ if(['mp3','wav','flac','aac','m4a','ogg'].includes(e))return '🎵';
+ if(['zip','rar','7z'].includes(e))return '🗜️';if(e==='apk')return '🤖';
+ if(['aep','prproj','drp','blend'].includes(e))return '🎞️';return '📄'}
+function toast(m){Dz.toast(m)}
+function N(o){NAV.push(o);return 'nav('+(NAV.length-1)+')'}
+function nav(i){go(NAV[i])}
+function A(fn){ACT.push(fn);return 'act('+(ACT.length-1)+')'}
+function act(i){ACT[i]()}
+
+// ---------- HTTP lewat Java (tanpa batasan CORS)
+function full(p){return base+p+(p.includes('?')?'&':'?')+'k='+encodeURIComponent(tok)}
+function api(p){return new Promise((res,rej)=>{const id=++rid;reqs[id]=[res,rej];Dz.get(id,full(p))})}
+window.onHttp=(id,code,body)=>{const r=reqs[id];delete reqs[id];if(!r)return;
+ if(code===200){try{r[0](JSON.parse(body))}catch(e){r[1](e)}}else r[1](new Error(code===0?body:'HTTP '+code))};
+
+// ---------- sambung
+function parse(s){s=(s||'').trim();if(!s)return null;if(!/^https?:\/\//i.test(s))s='http://'+s;
+ try{const u=new URL(s);const k=u.searchParams.get('k');if(!k)return null;return{base:u.origin,tok:k,host:u.host}}catch(e){return null}}
+async function connect(s){const p=parse(s);if(!p){toast('QR / alamat tidak valid. Scan QR dari panel DzShare di PC.');return}
+ stat.textContent='Menghubungkan ke '+p.host+'…';
+ base=p.base;tok=p.tok;
+ try{await api('/api/list');Dz.setPref('last',s);Dz.setPref('lasthost',p.host);
+  stat.textContent='Terhubung · '+p.host;showMain();go(null)}
+ catch(e){stat.textContent='Belum terhubung';base='';
+  toast('Tidak bisa terhubung. Pastikan DzShare di PC masih jalan dan HP di Wi-Fi yang sama.')}}
+window.onScan=s=>{if(s)connect(s)};
+function showConn(){conn.classList.remove('hidden');main.classList.add('hidden');pcbtn.classList.add('hidden');
+ const h=Dz.getPref('lasthost');lastbtn.classList.toggle('hidden',!h);lastbtn.textContent='↻ Sambung lagi ke '+h}
+function showMain(){conn.classList.add('hidden');main.classList.remove('hidden');pcbtn.classList.remove('hidden')}
+
+// ---------- folder simpan
+window.onFolder=(name,ok)=>{fname.textContent=name||'Belum dipilih';
+ if(ok&&pending){const j=pending;pending=null;send(j)}else if(!ok)pending=null};
+
+// ---------- jelajah
+function go(c){cur=c;load()}
+window.dzBack=()=>{if(!main.classList.contains('hidden')&&cur){
+ const parts=cur.sub?cur.sub.split('/'):[];
+ go(parts.length?{id:cur.id,name:cur.name,sub:parts.slice(0,-1).join('/')}:null);return true}
+ if(!conn.classList.contains('hidden')&&base){showMain();return true}return false};
+function row(ic,name,meta,btn,open){const o=open?` onclick="${open}"`:'';
+ return `<div class=row><div class=ic${o}>${ic}</div><div class=grow${o}><div class=name>${esc(name)}</div><div class=meta>${meta}</div></div>${btn}</div>`}
+const dlBtn=fn=>`<button class=btn onclick="${A(fn)}">Unduh</button>`;
+async function load(){NAV=[];ACT=[];try{
+ if(!cur){const d=await api('/api/list');
+  crumb.innerHTML='<span>Dari PC</span>';
+  acts.innerHTML=d.items.length>1?`<button class=btn onclick="${A(allRoot)}">Unduh semua</button>`:'';
+  items.innerHTML=d.items.length?d.items.map(it=>it.dir
+   ?row('📁',it.name,fmt(it.size)+' · folder',dlBtn(()=>folderJobs(it.id,it.name,'').then(send)),N({id:it.id,name:it.name,sub:''}))
+   :row(icon(it.name),it.name,fmt(it.size),dlBtn(()=>send([{url:full('/dl/'+it.id),rel:it.name,size:it.size}])))).join('')
+   :'<div class=empty>PC belum membagikan file.<br>Klik “Tambah file” di panel PC.</div>';
+  return}
+ const d=await api('/api/browse?id='+cur.id+'&sub='+encodeURIComponent(cur.sub));
+ const parts=cur.sub?cur.sub.split('/'):[];
+ let h=`<span onclick="go(null)">Dari PC</span> / <span onclick="${N({id:cur.id,name:cur.name,sub:''})}">${esc(cur.name)}</span>`;
+ parts.forEach((p,i)=>{h+=` / <span onclick="${N({id:cur.id,name:cur.name,sub:parts.slice(0,i+1).join('/')})}">${esc(p)}</span>`});
+ crumb.innerHTML=h;
+ const c=cur;
+ acts.innerHTML=`<button class="btn ghost" onclick="dzBack()">‹ Kembali</button>`+
+  (d.entries.length?`<button class=btn onclick="${A(()=>folderJobs(c.id,c.name,c.sub).then(send))}">Unduh folder ini</button>`:'');
+ items.innerHTML=d.entries.length?d.entries.map(e=>e.dir
+  ?row('📁',e.name,fmt(e.size)+' · folder',dlBtn(()=>folderJobs(c.id,c.name,e.rel).then(send)),N({id:c.id,name:c.name,sub:e.rel}))
+  :row(icon(e.name),e.name,fmt(e.size),dlBtn(()=>send([{url:full('/dl/'+c.id+'?f='+encodeURIComponent(e.rel)),rel:c.name+'/'+e.rel,size:e.size}])))).join('')
+  :'<div class=empty>Folder kosong.</div>';
+}catch(e){items.innerHTML='<div class=empty>Koneksi ke PC terputus.<br><br><button class="btn ghost" onclick="load()">Coba lagi</button></div>'}}
+
+// ---------- antrean download (struktur folder tetap utuh)
+async function folderJobs(id,name,sub){
+ const f=await api('/api/browse?all=1&id='+id+(sub?'&sub='+encodeURIComponent(sub):''));
+ return f.entries.map(e=>({url:full('/dl/'+id+'?f='+encodeURIComponent(e.rel)),rel:name+'/'+e.rel,size:e.size}))}
+async function allRoot(){const d=await api('/api/list');let jobs=[];
+ for(const it of d.items){if(it.dir)jobs=jobs.concat(await folderJobs(it.id,it.name,''));
+  else jobs.push({url:full('/dl/'+it.id),rel:it.name,size:it.size})}
+ send(jobs)}
+function send(jobs){if(!jobs||!jobs.length){toast('Folder kosong');return}
+ if(!Dz.hasFolder()){pending=jobs;toast('Pilih / buat folder untuk menyimpan file (mis. Download/DzShare)');Dz.pickFolder();return}
+ const r=Dz.download(JSON.stringify(jobs));
+ if(r!=='ok'){toast(r);return}
+ toast(jobs.length+' file masuk antrean');startPoll()}
+window.onQueued=n=>{if(n){toast(n+' file dikirim ke PC');startPoll()}};
+
+// ---------- panel progress
+function startPoll(){sheet.classList.remove('hidden');if(!poller)poller=setInterval(tick,500);tick()}
+function tick(){const s=JSON.parse(Dz.state());
+ if(!s.running&&!s.finished){sheet.classList.add('hidden');stopPoll();return}
+ const p=s.total?s.done/s.total*100:0;
+ const n=s.filesDone+s.failed;
+ tPct.textContent=s.running?Math.floor(p)+'%':(s.cancel?'Dibatalkan':(s.failed?'Selesai, '+s.failed+' gagal':'Selesai ✓'));
+ const eta=s.running&&s.speed>0?' · sisa '+dur((s.total-s.done)/s.speed):'';
+ tInfo.textContent=s.running
+  ? `${n}/${s.files} file · ${fmt(s.done)} / ${fmt(s.total)} · ${fmt(s.speed)}/s${eta}`
+  : `${s.filesDone}/${s.files} file · ${fmt(s.done)} dalam ${dur(s.elapsed/1000)} · rata-rata ${fmt(s.elapsed?s.done/(s.elapsed/1000):0)}/s`
+    +(s.skipped?` · ${s.skipped} sudah ada (dilewati)`:'');
+ tBar.className='bar'+(s.running?'':(s.failed||s.cancel?' fail':' ok'));
+ tBar.firstChild.style.width=(s.running?p:100)+'%';
+ tCur.textContent=s.running?s.current:'';
+ tErr.classList.toggle('hidden',!s.error);tErr.textContent=s.error?'Terakhir gagal: '+s.error:'';
+ tBtn.textContent=s.running?'Batal':'Tutup';tBtn.className='btn sm '+(s.running?'red':'ghost');
+ if(!s.running)stopPoll()}
+function stopPoll(){if(poller){clearInterval(poller);poller=null}}
+function sheetBtn(){const s=JSON.parse(Dz.state());if(s.running){Dz.cancel()}else{sheet.classList.add('hidden')}}
+function dur(sec){sec=Math.round(sec);return sec>=3600?Math.floor(sec/3600)+'j '+Math.floor(sec%3600/60)+'m':sec>=60?Math.floor(sec/60)+'m '+(sec%60)+'d':sec+'d'}
+
+// ---------- mulai
+fname.textContent=Dz.folderName()||'Belum dipilih';
+showConn();
+if(JSON.parse(Dz.state()).running)startPoll();
+</script>
+</body>
+</html>
